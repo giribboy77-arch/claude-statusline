@@ -1,4 +1,4 @@
-﻿# 한 줄 설치: irm https://raw.githubusercontent.com/giribboy77-arch/claude-statusline/main/install.ps1 | iex
+# 한 줄 설치: irm https://raw.githubusercontent.com/giribboy77-arch/claude-statusline/main/install.ps1 | iex
 # (iex로 실행되면 exit가 창을 닫으므로 전체를 블록으로 감싸고 return으로 빠져나온다)
 & {
     $ErrorActionPreference = 'Stop'
@@ -18,8 +18,11 @@
     Write-Host "Claude Code 상태줄 설치" -ForegroundColor Cyan
 
     # 압축을 풀어 실행했으면 옆의 파일을, 한 줄 설치면 GitHub에서 받은 파일을 쓴다
-    $here = if ($PSCommandPath) { Split-Path -Parent $PSCommandPath } else { $null }
+    # (install.cmd는 BOM 없는 UTF-8을 PowerShell 5.1에서 제대로 읽으려고 iex로 실행하며 폴더를 환경변수로 넘긴다)
+    $here = if ($env:CLAUDE_STATUSLINE_SRC) { $env:CLAUDE_STATUSLINE_SRC } elseif ($PSCommandPath) { Split-Path -Parent $PSCommandPath } else { $null }
+    $downloaded = $false
     if (-not $here -or -not (Test-Path (Join-Path $here 'statusline.py'))) {
+        $downloaded = $true
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
         $here = Join-Path ([IO.Path]::GetTempPath()) "claude-statusline-$PID"
         New-Item -ItemType Directory -Force $here | Out-Null
@@ -48,4 +51,5 @@
     }
 
     & $py[0] @($py | Select-Object -Skip 1) (Join-Path $here 'install.py')
+    if ($downloaded) { Remove-Item -Recurse -Force $here -ErrorAction SilentlyContinue }
 }
